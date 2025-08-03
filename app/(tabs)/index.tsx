@@ -36,7 +36,7 @@ export default function NewsFeedScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, {}]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Local News Feed</Text>
         <Text style={styles.headerSubtitle}>

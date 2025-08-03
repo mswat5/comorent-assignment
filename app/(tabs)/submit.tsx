@@ -5,7 +5,6 @@ import { NEWS_TOPICS, NewsSubmission } from "@/lib/types/news";
 import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -122,7 +121,6 @@ export default function SubmitNewsScreen() {
       );
       reset();
       setImageUri(undefined);
-      router.replace("/(tabs)");
     }
   };
 
@@ -262,7 +260,10 @@ export default function SubmitNewsScreen() {
           {error && (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={20} color="#ff4444" />
-              <Text style={styles.errorText}>{error}</Text>
+              <View style={styles.errorTextContainer}>
+                <Text style={styles.errorTitle}>Submission Rejected</Text>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
             </View>
           )}
 
@@ -276,7 +277,12 @@ export default function SubmitNewsScreen() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color="white" />
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="white" />
+                <Text style={styles.loadingText}>
+                  AI is reviewing your submission...
+                </Text>
+              </View>
             ) : (
               <>
                 <Ionicons
@@ -284,7 +290,9 @@ export default function SubmitNewsScreen() {
                   size={20}
                   color="white"
                 />
-                <Text style={styles.submitButtonText}>Submit for Review</Text>
+                <Text style={styles.submitButtonText}>
+                  Submit for AI Review
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -368,10 +376,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
   },
-  errorText: {
+  errorTextContainer: {
     flex: 1,
+    marginLeft: 8,
+  },
+  errorTitle: {
     fontSize: 14,
+    fontWeight: "600",
     color: "#c62828",
+    marginBottom: 4,
+  },
+  errorText: {
+    fontSize: 13,
+    color: "#c62828",
+    lineHeight: 18,
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "white",
+    fontSize: 14,
     marginLeft: 8,
   },
   submitButton: {
