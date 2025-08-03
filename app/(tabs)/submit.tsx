@@ -1,134 +1,63 @@
-import ErrorMessage from "@/components/ErrorMessage";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import { validateAndEditNews } from "@/lib/services/openaiService";
+import { FormInput } from "@/components/FormInput";
+import { FormPicker } from "@/components/FormPicker";
 import { useNewsStore } from "@/lib/store/useNewsStore";
 import { NEWS_TOPICS, NewsSubmission } from "@/lib/types/news";
-import { FontAwesome6 } from "@expo/vector-icons";
-import { useMutation } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
+  ActivityIndicator,
   Alert,
   Image,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { z } from "zod";
+
+const newsSchema = z.object({
+  title: z.string().min(1, "Title is required").max(100, "Title too long"),
+  description: z.string().min(50, "Description must be at least 50 characters"),
+  city: z.string().min(1, "City is required"),
+  topic: z.string().min(1, "Topic is required"),
+  publisherName: z.string().min(1, "Publisher name is required"),
+  publisherPhone: z.string().min(10, "Valid phone number required"),
+});
+
+type NewsFormData = z.infer<typeof newsSchema>;
 
 export default function SubmitNewsScreen() {
-  const [formData, setFormData] = useState<NewsSubmission>({
-    title: "",
-    description: "",
-    city: "",
-    topic: "",
-    publisherName: "",
-    publisherPhone: "",
-    image: undefined,
-  });
-  const [validationErrors, setValidationErrors] = useState<
-    Record<string, string>
-  >({});
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const { submitNews, isLoading, error, clearError } = useNewsStore();
+  const [imageUri, setImageUri] = useState<string>();
 
-  const { addNewsItem } = useNewsStore();
-
-  const submitMutation = useMutation({
-    mutationFn: validateAndEditNews,
-    onSuccess: (result) => {
-      if (result.isApproved && result.editedTitle && result.editedSummary) {
-        const newsItem = {
-          id: Date.now().toString(),
-          originalTitle: formData.title,
-          originalDescription: formData.description,
-          editedTitle: result.editedTitle,
-          editedSummary: result.editedSummary,
-          city: formData.city,
-          topic: formData.topic,
-          publisherName: formData.publisherName,
-          publisherPhone: formData.publisherPhone,
-          image: selectedImage || undefined,
-          createdAt: new Date().toISOString(),
-        };
-
-        addNewsItem(newsItem);
-
-        Alert.alert(
-          "News Published!",
-          "Your news has been reviewed and published to the feed.",
-          [{ text: "OK", onPress: resetForm }]
-        );
-      } else {
-        Alert.alert(
-          "Submission Rejected",
-          result.rejectionReason ||
-            "Your news submission was rejected by our AI editor.",
-          [{ text: "OK", onPress: resetForm }]
-        );
-      }
-    },
-    onError: (error) => {
-      resetForm();
-      Alert.alert(
-        "Submission Failed",
-        "There was an error processing your submission. Please try again.",
-        [{ text: "OK" }]
-      );
-    },
-  });
-
-  const resetForm = () => {
-    setFormData({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<NewsFormData>({
+    resolver: zodResolver(newsSchema),
+    defaultValues: {
       title: "",
       description: "",
       city: "",
       topic: "",
       publisherName: "",
       publisherPhone: "",
-      image: undefined,
-    });
-    setSelectedImage(null);
-    setValidationErrors({});
-  };
-
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    if (!formData.title.trim()) errors.title = "Title is required";
-    if (!formData.description.trim())
-      errors.description = "Description is required";
-    else if (formData.description.length < 50)
-      errors.description = "Description must be at least 50 characters";
-    if (!formData.city.trim()) errors.city = "City is required";
-    if (!formData.topic) errors.topic = "Topic is required";
-    if (!formData.publisherName.trim())
-      errors.publisherName = "Publisher name is required";
-    if (!formData.publisherPhone.trim())
-      errors.publisherPhone = "Phone number is required";
-    else if (!/^\d{10}$/.test(formData.publisherPhone.replace(/\D/g, ""))) {
-      errors.publisherPhone = "Please enter a valid 10-digit phone number";
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = () => {
-    if (!validateForm()) return;
-    submitMutation.mutate(formData);
-  };
+    },
+  });
 
   const pickImage = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permissionResult.granted) {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
       Alert.alert(
-        "Permission Required",
-        "Permission to access gallery is required!"
+        "Permission needed",
+        "Please grant camera roll permissions to upload images."
       );
       return;
     }
@@ -140,18 +69,17 @@ export default function SubmitNewsScreen() {
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
     }
   };
 
   const takePhoto = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-
-    if (!permissionResult.granted) {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
       Alert.alert(
-        "Permission Required",
-        "Permission to access camera is required!"
+        "Permission needed",
+        "Please grant camera permissions to take photos."
       );
       return;
     }
@@ -162,221 +90,202 @@ export default function SubmitNewsScreen() {
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
     }
   };
 
-  const removeImage = () => setSelectedImage(null);
+  const showImageOptions = () => {
+    Alert.alert("Add Image", "Choose an option", [
+      { text: "Camera", onPress: takePhoto },
+      { text: "Gallery", onPress: pickImage },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const onSubmit = async (data: NewsFormData) => {
+    clearError();
+
+    const submission: NewsSubmission = {
+      ...data,
+      imageUri,
+    };
+
+    const success = await submitNews(submission);
+
+    if (success) {
+      Alert.alert(
+        "Success!",
+        "Your news has been validated and published to the feed.",
+        [{ text: "OK" }]
+      );
+      reset();
+      setImageUri(undefined);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
-          <Text style={styles.title}>Submit Local News</Text>
-          <Text style={styles.subtitle}>
+          <Text style={styles.headerTitle}>Submit Local News</Text>
+          <Text style={styles.headerSubtitle}>
             Share what's happening in your community
           </Text>
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>News Title *</Text>
-            <TextInput
-              style={[
-                styles.input,
-                validationErrors.title && styles.inputError,
-              ]}
-              value={formData.title}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, title: text }))
-              }
-              placeholder="Enter a compelling headline"
-              maxLength={100}
-            />
-            {validationErrors.title && (
-              <Text style={styles.errorText}>{validationErrors.title}</Text>
+          <Controller
+            control={control}
+            name="title"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <FormInput
+                label="News Title"
+                placeholder="Enter a compelling headline"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.title?.message}
+                maxLength={100}
+              />
             )}
-          </View>
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description * (min. 50 characters)</Text>
-            <TextInput
-              style={[
-                styles.textArea,
-                validationErrors.description && styles.inputError,
-              ]}
-              value={formData.description}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, description: text }))
-              }
-              placeholder="Describe what happened in detail..."
-              multiline
-              numberOfLines={4}
-              maxLength={500}
-            />
-            <Text style={styles.charCount}>
-              {formData.description.length}/500
-            </Text>
-            {validationErrors.description && (
-              <Text style={styles.errorText}>
-                {validationErrors.description}
-              </Text>
+          <Controller
+            control={control}
+            name="description"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <FormInput
+                label="News Description"
+                placeholder="Describe the news event in detail (minimum 50 characters)"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.description?.message}
+                multiline
+                numberOfLines={4}
+                minLength={50}
+              />
             )}
-          </View>
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>City *</Text>
-            <TextInput
-              style={[styles.input, validationErrors.city && styles.inputError]}
-              value={formData.city}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, city: text }))
-              }
-              placeholder="Enter your city"
-              maxLength={50}
-            />
-            {validationErrors.city && (
-              <Text style={styles.errorText}>{validationErrors.city}</Text>
+          <Controller
+            control={control}
+            name="city"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <FormInput
+                label="City"
+                placeholder="Enter the city where this happened"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.city?.message}
+              />
             )}
-          </View>
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Topic/Category *</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.topicScroll}
-            >
-              {NEWS_TOPICS.map((topic) => (
-                <TouchableOpacity
-                  key={topic}
-                  style={[
-                    styles.topicChip,
-                    formData.topic === topic && styles.topicChipSelected,
-                  ]}
-                  onPress={() => setFormData((prev) => ({ ...prev, topic }))}
-                >
-                  <Text
-                    style={[
-                      styles.topicChipText,
-                      formData.topic === topic && styles.topicChipTextSelected,
-                    ]}
-                  >
-                    {topic}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            {validationErrors.topic && (
-              <Text style={styles.errorText}>{validationErrors.topic}</Text>
+          <Controller
+            control={control}
+            name="topic"
+            render={({ field: { onChange, value } }) => (
+              <FormPicker
+                label="Topic/Category"
+                selectedValue={value}
+                onValueChange={onChange}
+                options={NEWS_TOPICS}
+                error={errors.topic?.message}
+              />
             )}
-          </View>
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Your First Name *</Text>
-            <TextInput
-              style={[
-                styles.input,
-                validationErrors.publisherName && styles.inputError,
-              ]}
-              value={formData.publisherName}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, publisherName: text }))
-              }
-              placeholder="Enter your first name"
-              maxLength={50}
-            />
-            {validationErrors.publisherName && (
-              <Text style={styles.errorText}>
-                {validationErrors.publisherName}
-              </Text>
+          <Controller
+            control={control}
+            name="publisherName"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <FormInput
+                label="Your First Name"
+                placeholder="Enter your first name"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.publisherName?.message}
+              />
             )}
-          </View>
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number *</Text>
-            <TextInput
-              style={[
-                styles.input,
-                validationErrors.publisherPhone && styles.inputError,
-              ]}
-              value={formData.publisherPhone}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, publisherPhone: text }))
-              }
-              placeholder="Enter your phone number"
-              keyboardType="phone-pad"
-              maxLength={15}
-            />
-            {validationErrors.publisherPhone && (
-              <Text style={styles.errorText}>
-                {validationErrors.publisherPhone}
-              </Text>
+          <Controller
+            control={control}
+            name="publisherPhone"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <FormInput
+                label="Phone Number"
+                placeholder="Enter your phone number"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.publisherPhone?.message}
+                keyboardType="phone-pad"
+              />
             )}
-          </View>
+          />
 
-          <View style={styles.inputGroup}>
+          {/* Image Upload Section */}
+          <View style={styles.imageSection}>
             <Text style={styles.label}>Image (Optional)</Text>
-            {selectedImage ? (
+            {imageUri ? (
               <View style={styles.imageContainer}>
                 <Image
-                  source={{ uri: selectedImage }}
+                  source={{ uri: imageUri }}
                   style={styles.selectedImage}
                 />
                 <TouchableOpacity
                   style={styles.removeImageButton}
-                  onPress={removeImage}
+                  onPress={() => setImageUri(undefined)}
                 >
-                  <FontAwesome6 name="x" size={20} color="#FFFFFF" />
+                  <Ionicons name="close-circle" size={24} color="#ff4444" />
                 </TouchableOpacity>
               </View>
             ) : (
-              <View style={styles.imageButtons}>
-                <TouchableOpacity
-                  style={styles.imageButton}
-                  onPress={takePhoto}
-                >
-                  <FontAwesome6 name="camera" size={24} color="#3B82F6" />
-                  <Text style={styles.imageButtonText}>Take Photo</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.imageButton}
-                  onPress={pickImage}
-                >
-                  <FontAwesome6 name="image" size={24} color="#3B82F6" />
-                  <Text style={styles.imageButtonText}>
-                    Choose from Gallery
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={styles.imageButton}
+                onPress={showImageOptions}
+              >
+                <Ionicons name="camera-outline" size={32} color="#666" />
+                <Text style={styles.imageButtonText}>Add Photo</Text>
+              </TouchableOpacity>
             )}
           </View>
 
+          {/* Error Display */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={20} color="#ff4444" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Submit Button */}
           <TouchableOpacity
             style={[
               styles.submitButton,
-              submitMutation.isPending && styles.submitButtonDisabled,
+              isLoading && styles.submitButtonDisabled,
             ]}
-            onPress={handleSubmit}
-            disabled={submitMutation.isPending}
+            onPress={handleSubmit(onSubmit)}
+            disabled={isLoading}
           >
-            {submitMutation.isPending ? (
-              <LoadingSpinner text="AI is reviewing your news..." />
+            {isLoading ? (
+              <ActivityIndicator color="white" />
             ) : (
-              <Text style={styles.submitButtonText}>Submit for AI Review</Text>
+              <>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={20}
+                  color="white"
+                />
+                <Text style={styles.submitButtonText}>Submit for Review</Text>
+              </>
             )}
           </TouchableOpacity>
-
-          {submitMutation.isError && (
-            <ErrorMessage
-              message="Failed to submit news. Please check your connection and try again."
-              onRetry={() => submitMutation.mutate(formData)}
-            />
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -386,117 +295,53 @@ export default function SubmitNewsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#f8f9fa",
   },
   scrollView: {
     flex: 1,
   },
   header: {
-    padding: 20,
-    backgroundColor: "#FFFFFF",
+    padding: 16,
+    backgroundColor: "white",
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: "#e0e0e0",
   },
-  title: {
-    fontSize: 28,
+  headerTitle: {
+    fontSize: 24,
     fontWeight: "700",
-    color: "#1F2937",
-    marginBottom: 4,
+    color: "#1a1a1a",
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 4,
   },
   form: {
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
+    padding: 16,
   },
   label: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#374151",
+    color: "#1a1a1a",
     marginBottom: 8,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: "#FFFFFF",
-  },
-  textArea: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: "#FFFFFF",
-    height: 100,
-    textAlignVertical: "top",
-  },
-  inputError: {
-    borderColor: "#EF4444",
-  },
-  errorText: {
-    fontSize: 14,
-    color: "#EF4444",
-    marginTop: 4,
-  },
-  charCount: {
-    fontSize: 12,
-    color: "#6B7280",
-    textAlign: "right",
-    marginTop: 4,
-  },
-  topicScroll: {
-    marginBottom: 8,
-  },
-  topicChip: {
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  topicChipSelected: {
-    backgroundColor: "#3B82F6",
-    borderColor: "#3B82F6",
-  },
-  topicChipText: {
-    fontSize: 14,
-    color: "#374151",
-    fontWeight: "500",
-  },
-  topicChipTextSelected: {
-    color: "#FFFFFF",
-  },
-  imageButtons: {
-    flexDirection: "row",
-    gap: 12,
+  imageSection: {
+    marginBottom: 20,
   },
   imageButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#3B82F6",
+    borderWidth: 2,
+    borderColor: "#ddd",
+    borderStyle: "dashed",
     borderRadius: 8,
-    paddingVertical: 12,
-    gap: 8,
+    height: 120,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fafafa",
   },
   imageButtonText: {
     fontSize: 16,
-    color: "#3B82F6",
-    fontWeight: "500",
+    color: "#666",
+    marginTop: 8,
   },
   imageContainer: {
     position: "relative",
@@ -510,26 +355,39 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: "#EF4444",
-    borderRadius: 16,
-    width: 32,
-    height: 32,
+    backgroundColor: "white",
+    borderRadius: 12,
+  },
+  errorContainer: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#ffebee",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#c62828",
+    marginLeft: 8,
   },
   submitButton: {
-    backgroundColor: "#3B82F6",
-    borderRadius: 8,
-    paddingVertical: 16,
+    backgroundColor: "#007AFF",
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 20,
+    justifyContent: "center",
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 8,
   },
   submitButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    opacity: 0.6,
   },
   submitButtonText: {
-    fontSize: 18,
+    color: "white",
+    fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    marginLeft: 8,
   },
 });

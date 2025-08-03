@@ -5,10 +5,10 @@ export interface NewsSubmission {
   topic: string;
   publisherName: string;
   publisherPhone: string;
-  image?: string;
+  imageUri?: string;
 }
 
-export interface NewsItem {
+export interface PublishedNews {
   id: string;
   originalTitle: string;
   originalDescription: string;
@@ -17,24 +17,30 @@ export interface NewsItem {
   city: string;
   topic: string;
   publisherName: string;
-  publisherPhone: string;
-  image?: string;
-  createdAt: string;
+  maskedPhone: string;
+  imageUri?: string;
+  timestamp: number;
   isBookmarked?: boolean;
 }
 
+export interface AIValidationResult {
+  isValid: boolean;
+  reason?: string;
+  editedTitle?: string;
+  editedSummary?: string;
+}
+
 export const NEWS_TOPICS = [
-  'Accident',
-  'Festival',
-  'Community Event',
-  'Local Business',
-  'Infrastructure',
-  'Education',
-  'Health',
-  'Environment',
-  'Sports',
-  'Politics',
-  'Other',
+  "Accident",
+  "Festival",
+  "Community Event",
+  "Traffic",
+  "Weather",
+  "Sports",
+  "Politics",
+  "Business",
+  "Education",
+  "Healthcare",
 ] as const;
 
 export type NewsTopic = (typeof NEWS_TOPICS)[number];
