@@ -27,7 +27,7 @@ export default function TabLayout() {
         options={{
           title: "News Feed",
           tabBarIcon: ({ size, color }) => (
-            <FontAwesome6 size={size} color={color} />
+            <FontAwesome6 name="newspaper" size={size} color={color} />
           ),
         }}
       />
@@ -36,7 +36,7 @@ export default function TabLayout() {
         options={{
           title: "Submit News",
           tabBarIcon: ({ size, color }) => (
-            <FontAwesome6 name="" size={size} color={color} />
+            <FontAwesome6 name="pen" size={size} color={color} />
           ),
         }}
       />
