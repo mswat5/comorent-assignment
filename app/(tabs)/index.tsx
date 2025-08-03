@@ -18,10 +18,8 @@ export default function NewsFeedScreen() {
   const [selectedCity, setSelectedCity] = useState<string>("All");
   const [selectedTopic, setSelectedTopic] = useState<string>("All");
 
-  // Get unique cities from news
   const cities = ["All", ...Array.from(new Set(news.map((item) => item.city)))];
 
-  // Filter news based on selected filters
   const filteredNews = news.filter((item) => {
     const matchesCity = selectedCity === "All" || item.city === selectedCity;
     const matchesTopic =
@@ -47,65 +45,71 @@ export default function NewsFeedScreen() {
         </Text>
       </View>
 
-      {/* City Filters */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterSection}
-      >
-        {cities.map((city) => (
-          <FilterButton
-            key={city}
-            title={city}
-            isActive={selectedCity === city}
-            onPress={() => setSelectedCity(city)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Topic Filters */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterSection}
-      >
-        <FilterButton
-          title="All"
-          isActive={selectedTopic === "All"}
-          onPress={() => setSelectedTopic("All")}
-        />
-        {NEWS_TOPICS.map((topic) => (
-          <FilterButton
-            key={topic}
-            title={topic}
-            isActive={selectedTopic === topic}
-            onPress={() => setSelectedTopic(topic)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* News List */}
-      <FlatList
-        data={filteredNews}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <NewsCard news={item} onBookmark={toggleBookmark} />
-        )}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No news stories found</Text>
-            <Text style={styles.emptySubtext}>
-              Submit your first local news story!
-            </Text>
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScrollView}
+          contentContainerStyle={styles.filterContentContainer}
+        >
+          {cities.map((city) => (
+            <View key={city} style={styles.filterButtonWrapper}>
+              <FilterButton
+                title={city}
+                isActive={selectedCity === city}
+                onPress={() => setSelectedCity(city)}
+              />
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScrollView}
+          contentContainerStyle={styles.filterContentContainer}
+        >
+          <View style={styles.filterButtonWrapper}>
+            <FilterButton
+              title="All"
+              isActive={selectedTopic === "All"}
+              onPress={() => setSelectedTopic("All")}
+            />
           </View>
-        }
-        contentContainerStyle={
-          filteredNews.length === 0 ? styles.emptyContainer : undefined
-        }
-      />
+          {NEWS_TOPICS.map((topic) => (
+            <View key={topic} style={styles.filterButtonWrapper}>
+              <FilterButton
+                title={topic}
+                isActive={selectedTopic === topic}
+                onPress={() => setSelectedTopic(topic)}
+              />
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.newsContainer}>
+        <FlatList
+          data={filteredNews}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <NewsCard news={item} onBookmark={toggleBookmark} />
+          )}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={handleRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No news stories found</Text>
+              <Text style={styles.emptySubtext}>
+                Submit your first local news story!
+              </Text>
+            </View>
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -131,19 +135,33 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
   },
-  filterSection: {
+  filterContainer: {
+    backgroundColor: "white",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  filterScrollView: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "white",
   },
-  emptyContainer: {
+  filterContentContainer: {
+    paddingRight: 16,
+  },
+  filterButtonWrapper: {
+    marginRight: 8,
+    minWidth: 60,
+    height: 36,
+  },
+  newsContainer: {
     flex: 1,
+    backgroundColor: "#f8f9fa",
   },
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 32,
+    minHeight: 300,
   },
   emptyText: {
     fontSize: 18,

@@ -5,6 +5,7 @@ import { NEWS_TOPICS, NewsSubmission } from "@/lib/types/news";
 import { Ionicons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -121,6 +122,7 @@ export default function SubmitNewsScreen() {
       );
       reset();
       setImageUri(undefined);
+      router.replace("/(tabs)");
     }
   };
 

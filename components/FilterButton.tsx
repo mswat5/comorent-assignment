@@ -1,5 +1,5 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
 interface FilterButtonProps {
   title: string;
@@ -13,31 +13,32 @@ export function FilterButton({ title, isActive, onPress }: FilterButtonProps) {
       style={[styles.button, isActive && styles.activeButton]}
       onPress={onPress}
     >
-      <Text style={[styles.text, isActive && styles.activeText]}>
-        {title}
-      </Text>
+      <Text style={[styles.text, isActive && styles.activeText]}>{title}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 14,
+    backgroundColor: "#f5f5f5",
     marginRight: 8,
-    marginBottom: 8,
+    marginBottom: 6,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
   },
   activeButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
   },
   text: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 16,
+    color: "#555",
+    fontWeight: "600",
   },
   activeText: {
-    color: 'white',
+    color: "white",
   },
 });
