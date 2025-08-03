@@ -16,7 +16,6 @@ A React Native mobile application for sharing and discovering local news stories
 - React Native with Expo
 - TypeScript
 - Zustand for state management
-- tanstack query for real time updates
 - Zod for form validation
 - Expo Image Picker for camera integration
 
