@@ -1,6 +1,5 @@
 import { AIValidationResult, NewsSubmission } from "@/lib/types/news";
 
-// Mocked AI service that simulates GPT-4o-mini behavior for news validation and editing
 export class MockAIService {
   private static readonly SPAM_KEYWORDS = [
     "buy now",
@@ -58,14 +57,19 @@ export class MockAIService {
   static async validateAndEdit(
     submission: NewsSubmission
   ): Promise<AIValidationResult> {
-    // Simulate GPT-4o-mini API processing delay (1.5-3 seconds)
     const delay = Math.random() * 1500 + 1500;
     await new Promise((resolve) => setTimeout(resolve, delay));
+
+    if (!submission.title || !submission.description || !submission.city) {
+      return {
+        isValid: false,
+        reason: "AI Validation Failed: Missing required fields.",
+      };
+    }
 
     const fullText =
       `${submission.title} ${submission.description}`.toLowerCase();
 
-    // 1. Check for spam/promotional content
     const hasSpam = this.SPAM_KEYWORDS.some((keyword) =>
       fullText.includes(keyword)
     );
@@ -77,7 +81,6 @@ export class MockAIService {
       };
     }
 
-    // 2. Check for inappropriate/harmful content
     const hasInappropriate = this.INAPPROPRIATE_KEYWORDS.some((keyword) =>
       fullText.includes(keyword)
     );
@@ -89,21 +92,6 @@ export class MockAIService {
       };
     }
 
-    // 3. Check if content is actually local news related
-    const hasLocalContext =
-      this.LOCAL_NEWS_KEYWORDS.some((keyword) => fullText.includes(keyword)) ||
-      submission.city.trim().length > 2;
-
-    // 4. Validate content length and local relevance
-    if (!hasLocalContext && submission.description.length < 80) {
-      return {
-        isValid: false,
-        reason:
-          "AI Validation Failed: Content does not appear to be local news or lacks sufficient detail. Please describe how this event impacts your local community and provide more context.",
-      };
-    }
-
-    // 5. Check for minimum content quality
     if (submission.title.length < 10) {
       return {
         isValid: false,
@@ -112,7 +100,26 @@ export class MockAIService {
       };
     }
 
-    // 6. Check for generic/vague content
+    if (submission.description.length < 20) {
+      return {
+        isValid: false,
+        reason:
+          "AI Validation Failed: Description is too short. Please provide more details about the news event.",
+      };
+    }
+
+    const hasLocalContext =
+      this.LOCAL_NEWS_KEYWORDS.some((keyword) => fullText.includes(keyword)) ||
+      submission.city.trim().length > 2;
+
+    if (!hasLocalContext && submission.description.length < 80) {
+      return {
+        isValid: false,
+        reason:
+          "AI Validation Failed: Content does not appear to be local news or lacks sufficient detail. Please describe how this event impacts your local community and provide more context.",
+      };
+    }
+
     const vagueWords = [
       "something",
       "stuff",
@@ -130,7 +137,6 @@ export class MockAIService {
       };
     }
 
-    // 7. Generate AI-edited content (GPT-4o-mini style improvements)
     const editedTitle = this.improveTitle(submission.title);
     const editedSummary = this.improveSummary(
       submission.description,
@@ -146,28 +152,11 @@ export class MockAIService {
   }
 
   private static improveTitle(title: string): string {
-    // Simulate GPT-4o-mini title improvement
     let improved = title.trim();
-
-    // Fix capitalization
     improved = improved.charAt(0).toUpperCase() + improved.slice(1);
-
-    // Clean up punctuation
     improved = improved.replace(/[!]{2,}/g, "!").replace(/[?]{2,}/g, "?");
     improved = improved.replace(/\.{2,}/g, ".");
 
-    // Add proper ending if missing
-    if (!improved.match(/[.!?]$/)) {
-      improved += "";
-    }
-
-    // Make it more news-like (add location context if missing obvious location words)
-    const locationWords = ["in", "at", "near", "downtown", "local"];
-    const hasLocation = locationWords.some((word) =>
-      improved.toLowerCase().includes(word)
-    );
-
-    // Simulate GPT making titles more engaging
     if (improved.toLowerCase().includes("accident")) {
       improved = improved.replace(/accident/i, "Traffic Incident");
     }
@@ -183,25 +172,19 @@ export class MockAIService {
     city: string,
     topic: string
   ): string {
-    // Simulate GPT-4o-mini summary improvement and editing
     let summary = description.trim();
-
-    // Fix basic grammar and structure
     summary = summary.charAt(0).toUpperCase() + summary.slice(1);
 
-    // Add location context if missing (GPT would do this)
     if (!summary.toLowerCase().includes(city.toLowerCase()) && city.trim()) {
       summary = `${summary} The ${topic.toLowerCase()} occurred in ${city}, affecting local residents.`;
     }
 
-    // Ensure proper news format (2-3 sentences max)
     const sentences = summary
       .split(/[.!?]+/)
       .filter((s) => s.trim().length > 0);
     if (sentences.length > 3) {
       summary = sentences.slice(0, 3).join(". ") + ".";
     } else if (sentences.length === 1 && summary.length > 100) {
-      // GPT would break long single sentences into multiple sentences
       const midPoint = summary.indexOf(" ", summary.length / 2);
       if (midPoint > 0) {
         summary =
@@ -215,12 +198,10 @@ export class MockAIService {
       }
     }
 
-    // Add professional news tone
     summary = summary.replace(/\bi\b/gi, "the reporter");
     summary = summary.replace(/\bmy\b/gi, "the");
     summary = summary.replace(/\bme\b/gi, "local residents");
 
-    // Ensure it ends with proper punctuation
     if (!summary.match(/[.!?]$/)) {
       summary += ".";
     }

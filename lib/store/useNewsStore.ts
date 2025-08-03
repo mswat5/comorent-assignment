@@ -42,11 +42,8 @@ export const useNewsStore = create<NewsState>((set, get) => ({
 
   submitNews: async (submission: NewsSubmission): Promise<boolean> => {
     set({ isLoading: true, error: null });
-
     try {
-      // Validate and edit with AI
       const result = await MockAIService.validateAndEdit(submission);
-
       if (!result.isValid) {
         set({
           error: result.reason || "Content rejected by AI validation",
@@ -54,8 +51,6 @@ export const useNewsStore = create<NewsState>((set, get) => ({
         });
         return false;
       }
-
-      // Create published news item
       const publishedNews: PublishedNews = {
         id: Date.now().toString(),
         originalTitle: submission.title,
@@ -70,14 +65,10 @@ export const useNewsStore = create<NewsState>((set, get) => ({
         timestamp: Date.now(),
         isBookmarked: false,
       };
-
-      // Update state and storage
       const currentNews = get().news;
       const updatedNews = [publishedNews, ...currentNews];
-
       await StorageService.saveNews(updatedNews);
       set({ news: updatedNews, isLoading: false });
-
       return true;
     } catch (error) {
       set({
